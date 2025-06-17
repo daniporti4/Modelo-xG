@@ -48,7 +48,7 @@ fig.update_layout(
 )
 
 # Mostrar campo y capturar clic
-click_result = plotly_events(fig, click_event=True, hover_event=False, override_height=470, return_click_data=True)
+click_result = plotly_events(fig, click_event=True, hover_event=False)
 
 if click_result:
     x = click_result[0]["x"]

@@ -15,8 +15,8 @@ import joblib
 from xgboost import XGBRegressor
 
 # Cargar modelo y encoder
-modelo = joblib.load("/content/drive/MyDrive/TFM/modelo_prueba.pkl")
-encoder = joblib.load("/content/drive/MyDrive/TFM/encoder_ohe.pkl")
+modelo = joblib.load("modelo_prueba.pkl")
+encoder = joblib.load("encoder_ohe.pkl")
 
 st.title("Calculadora de xG")
 

@@ -14,6 +14,8 @@ import numpy as np
 import joblib
 from xgboost import XGBRegressor
 import plotly.graph_objects as go
+from streamlit_plotly_events import plotly_events
+
 
 # Cargar modelo y encoder
 modelo = joblib.load("modelo_prueba.pkl")

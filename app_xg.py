@@ -31,7 +31,7 @@ distance = (dx**2 + dy**2) ** 0.5
 angle = math.atan2(7.32 * dx, dx**2 + dy**2) * (180 / math.pi)  # 7.32m = ancho de portería
 
 # shot_body_part
-body_part = st.selectbox("Parte del cuerpo", ["Left Foot", "Other", "Right Foot"])
+body_part = st.selectbox("Parte del cuerpo", ["Left Foot", "Other", "Right Foot", "Head])
 
 # shot_outcome
 outcome = st.selectbox("Resultado del disparo", ["Goal", "Off T", "Post", "Saved", "Saved Off Target", "Saved to Post", "Wayward"])

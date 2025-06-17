@@ -56,7 +56,7 @@ technique = st.selectbox("Técnica", [
 ])
 
 # shot_type
-shot_type = st.selectbox("Tipo de jugada", ["Free Kick", "Open Play"])
+shot_type = st.selectbox("Tipo de disparo", ["Free Kick", "Open Play", "Corner"])
 
 def encode_onehot(value, valid_options):
     return [1 if value == opt else 0 for opt in valid_options]

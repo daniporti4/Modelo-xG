@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np
 import joblib
 from xgboost import XGBRegressor
+import plotly.graph_objects as go
 
 # Cargar modelo y encoder
 modelo = joblib.load("modelo_prueba.pkl")
@@ -33,6 +34,33 @@ numeric_cols = ['distance', 'angle']
 # Inputs del usuario
 x = st.slider("Coordenada X del disparo (0 a 120)", 0, 120, 100)
 y = st.slider("Coordenada Y del disparo (0 a 80)", 0, 80, 40)
+
+# Visualizar disparo en el campo
+st.subheader("Ubicación del disparo")
+
+fig = go.Figure()
+
+# Crear el campo
+fig.update_layout(
+    xaxis=dict(range=[0, 120], showgrid=False, zeroline=False, visible=False),
+    yaxis=dict(range=[0, 80], showgrid=False, zeroline=False, visible=False),
+    width=700,
+    height=470,
+    plot_bgcolor="green",
+    margin=dict(l=10, r=10, t=10, b=10)
+)
+
+# Añadir disparo
+fig.add_trace(go.Scatter(
+    x=[x],
+    y=[y],
+    mode='markers',
+    marker=dict(size=14, color='red'),
+    name='Disparo'
+))
+
+# Mostrar el gráfico
+st.plotly_chart(fig)
 
 body_part = st.selectbox("Parte del cuerpo", ["Right Foot", "Left Foot", "Head", "Other"])
 play_pattern = st.selectbox("Tipo de jugada", [

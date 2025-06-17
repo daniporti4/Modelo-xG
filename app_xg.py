@@ -13,8 +13,8 @@ import pandas as pd
 import numpy as np
 import joblib
 from xgboost import XGBRegressor
-import plotly.graph_objects as go
-from streamlit_plotly_events import plotly_events
+from streamlit_drawable_canvas import st_canvas
+from PIL import Image
 
 
 # Cargar modelo y encoder
@@ -35,40 +35,38 @@ numeric_cols = ['distance', 'angle']
 
 st.subheader("Haz clic en el campo para registrar el disparo")
 
-# Crear figura del campo
-fig = go.Figure()
+# Cargar imagen del campo
+campo = Image.open("campo.png")
 
-fig.update_layout(
-    xaxis=dict(range=[0, 120], showgrid=False, zeroline=False, visible=False),
-    yaxis=dict(range=[0, 80], showgrid=False, zeroline=False, visible=False, autorange='reversed'),
-    width=700,
+st.subheader("Haz clic sobre el campo para registrar el disparo")
+
+# Canvas interactivo
+canvas_result = st_canvas(
+    fill_color="red",
+    stroke_width=0,
+    stroke_color="red",
+    background_image=campo,
+    update_streamlit=True,
     height=470,
-    plot_bgcolor="green",
-    margin=dict(l=10, r=10, t=10, b=10)
+    width=700,
+    drawing_mode="point",
+    key="canvas"
 )
 
-# Mostrar campo y capturar clic
-click_result = plotly_events(fig, click_event=True, hover_event=False)
+# Procesar clic
+if canvas_result.json_data and canvas_result.json_data["objects"]:
+    punto = canvas_result.json_data["objects"][-1]
+    rel_x = punto["left"] / 700  # ancho real del canvas
+    rel_y = punto["top"] / 470   # alto real del canvas
 
-if click_result:
-    x = click_result[0]["x"]
-    y = click_result[0]["y"]
-    st.success(f"Has hecho clic en: X = {int(x)}, Y = {int(y)}")
+    # Convertir a escala StatsBomb (x: 0–120, y: 0–80)
+    x = int(rel_x * 120)
+    y = int(rel_y * 80)
+
+    st.success(f"Disparo en X = {x}, Y = {y}")
 else:
-    st.warning("Haz clic en el campo para seleccionar un disparo.")
+    st.warning("Haz clic sobre el campo para registrar el disparo.")
     st.stop()
-
-body_part = st.selectbox("Parte del cuerpo", ["Right Foot", "Left Foot", "Head", "Other"])
-play_pattern = st.selectbox("Tipo de jugada", [
-    'Regular Play', 'From Free Kick', 'From Throw In', 'From Corner',
-    'From Counter', 'From Goal Kick', 'From Keeper', 'From Kick Off', 'Other'
-])
-shot_type = st.selectbox("Tipo de disparo", ['Open Play', 'Free Kick', 'Corner'])
-
-shot_technique = st.selectbox("Técnica", [
-    'Normal', 'Half Volley', 'Volley', 'Lob',
-    'Overhead Kick', 'Diving Header', 'Backheel'
-])
 
 # Boleanos
 under_pressure = st.checkbox("Bajo presión")

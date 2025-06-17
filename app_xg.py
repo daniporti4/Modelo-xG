@@ -48,11 +48,11 @@ fig.update_layout(
 )
 
 # Mostrar campo y capturar clic
-click_result = plotly_events(fig, click_event=True, hover_event=False)
+click_result = plotly_events(fig, click_event=True, hover_event=False, override_height=470, return_click_data=True)
 
 if click_result:
-    x = click_result[0]['x']
-    y = click_result[0]['y']
+    x = click_result[0]["x"]
+    y = click_result[0]["y"]
     st.success(f"Has hecho clic en: X = {int(x)}, Y = {int(y)}")
 else:
     st.warning("Haz clic en el campo para seleccionar un disparo.")

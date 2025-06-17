@@ -36,7 +36,7 @@ numeric_cols = ['distance', 'angle']
 st.subheader("Haz clic en el campo para registrar el disparo")
 
 # Cargar imagen del campo
-campo = Image.open("campo.png")
+campo = Image.open("campo.png").convert("RGB")
 
 st.subheader("Haz clic sobre el campo para registrar el disparo")
 

@@ -17,6 +17,8 @@ with open("modelo_prueba.pkl", "rb") as f:
 
 st.title("Calculadora de xG")
 
+st.write("Selecciona las características de un disparo y obtén su probabilidad de gol (xG) estimada por el modelo.")
+
 # Distancia y ángulo (suponiendo que los calculas a partir de x, y)
 x = st.slider("Coordenada X (0-120)", 0, 120, 60)
 y = st.slider("Coordenada Y (0-80)", 0, 80, 40)

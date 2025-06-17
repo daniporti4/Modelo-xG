@@ -31,36 +31,30 @@ categorical_cols = [
 # Columnas numéricas
 numeric_cols = ['distance', 'angle']
 
-# Inputs del usuario
-x = st.slider("Coordenada X del disparo (0 a 120)", 0, 120, 100)
-y = st.slider("Coordenada Y del disparo (0 a 80)", 0, 80, 40)
+st.subheader("Haz clic en el campo para registrar el disparo")
 
-# Visualizar disparo en el campo
-st.subheader("Ubicación del disparo")
-
+# Crear figura del campo
 fig = go.Figure()
 
-# Crear el campo
 fig.update_layout(
     xaxis=dict(range=[0, 120], showgrid=False, zeroline=False, visible=False),
-    yaxis=dict(range=[0, 80], showgrid=False, zeroline=False, visible=False),
+    yaxis=dict(range=[0, 80], showgrid=False, zeroline=False, visible=False, autorange='reversed'),
     width=700,
     height=470,
     plot_bgcolor="green",
     margin=dict(l=10, r=10, t=10, b=10)
 )
 
-# Añadir disparo
-fig.add_trace(go.Scatter(
-    x=[x],
-    y=[y],
-    mode='markers',
-    marker=dict(size=14, color='red'),
-    name='Disparo'
-))
+# Mostrar campo y capturar clic
+click_result = plotly_events(fig, click_event=True, hover_event=False)
 
-# Mostrar el gráfico
-st.plotly_chart(fig)
+if click_result:
+    x = click_result[0]['x']
+    y = click_result[0]['y']
+    st.success(f"Has hecho clic en: X = {int(x)}, Y = {int(y)}")
+else:
+    st.warning("Haz clic en el campo para seleccionar un disparo.")
+    st.stop()
 
 body_part = st.selectbox("Parte del cuerpo", ["Right Foot", "Left Foot", "Head", "Other"])
 play_pattern = st.selectbox("Tipo de jugada", [

@@ -99,9 +99,12 @@ for col in expected_features:
     if col not in X_final.columns:
         X_final[col] = 0.0
 X_final = X_final[expected_features]
+
 # DEBUG: Mostrar info antes de predecir
 st.write("🧪 Distancia calculada:", round(distance, 2))
 st.write("🧪 Ángulo calculado:", round(angle, 2))
+st.write("🧪 Primeras columnas de entrada al modelo:")
+st.write(X_final.iloc[:, :10])  # solo primeras 10 para no saturar
 
 # Predecir
 pred_xg = modelo.predict(X_final)[0]

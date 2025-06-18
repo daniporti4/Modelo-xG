@@ -13,8 +13,6 @@ import pandas as pd
 import numpy as np
 import joblib
 from xgboost import XGBRegressor
-from streamlit_drawable_canvas import st_canvas
-from plotly_football_pitch import make_pitch_figure, PitchDimensions, SingleColourBackground
 
 # Cargar modelo y encoder
 modelo = joblib.load("modelo_prueba.pkl")
@@ -22,33 +20,16 @@ encoder = joblib.load("encoder_ohe.pkl")
 
 st.title("Calculadora de xG")
 
-# Inicializar estado para guardar disparos
-if "disparos" not in st.session_state:
-    st.session_state.disparos = []
+# Coordenadas
+st.subheader("Coordenadas del disparo")
+x = st.slider("Eje X (largo del campo)", 0, 120, 100)
+y = st.slider("Eje Y (ancho del campo)", 0, 80, 40)
 
-# Columnas categóricas en orden
-categorical_cols = [
-    'shot_body_part', 'play_pattern', 'under_pressure',
-    'shot_one_on_one', 'shot_open_goal', 'shot_aerial_won',
-    'shot_first_time', 'shot_deflected', 'shot_technique', 'shot_type'
-]
-
-# Columnas numéricas
-numeric_cols = ['distance', 'angle']
-
-st.subheader("Haz clic sobre el campo para registrar el disparo")
-
-st.markdown("### Coordenadas del disparo")
-x = st.slider("Eje X (largo del campo)", min_value=0, max_value=120, value=100)
-y = st.slider("Eje Y (ancho del campo)", min_value=0, max_value=80, value=40)
-
-# Selección de opciones
+# Características del disparo
 body_part = st.selectbox("Parte del cuerpo", ["Right Foot", "Left Foot", "Head"])
 shot_technique = st.selectbox("Técnica", ["Normal", "Volley", "Lob"])
 shot_type = st.selectbox("Tipo", ["Open Play", "Free Kick", "From Corner"])
 play_pattern = st.selectbox("Patrón de juego", ["Regular Play", "From Counter", "From Throw In"])
-
-# Boleanos
 under_pressure = st.checkbox("Bajo presión")
 one_on_one = st.checkbox("Uno contra uno")
 open_goal = st.checkbox("Portería vacía")
@@ -72,7 +53,7 @@ def calcular_angulo(x, y):
 
 angle = calcular_angulo(x, y)
 
-# Input para el modelo
+# Preparar input
 input_df = pd.DataFrame([{
     'shot_body_part': body_part,
     'play_pattern': play_pattern,
@@ -86,54 +67,17 @@ input_df = pd.DataFrame([{
     'shot_type': shot_type
 }])
 
-# Codificación + unión con numéricas
 X_cat = encoder.transform(input_df)
 X_cat_df = pd.DataFrame(X_cat, columns=encoder.get_feature_names_out(), index=input_df.index)
-X_num = pd.DataFrame([[distance, angle]], columns=numeric_cols)
+X_num = pd.DataFrame([[distance, angle]], columns=["distance", "angle"])
 X_final = pd.concat([X_num, X_cat_df], axis=1)
 
-# Asegurar columnas modelo
 expected_features = modelo.get_booster().feature_names
 for col in expected_features:
     if col not in X_final.columns:
         X_final[col] = 0.0
 X_final = X_final[expected_features]
 
-# Predicción xG
+# Predecir
 pred_xg = modelo.predict(X_final)[0]
 st.success(f"xG estimado: **{pred_xg:.3f}**")
-
-# Guardar disparo en el historial
-st.session_state.disparos.append({"x": x, "y": y, "xG": pred_xg})
-
-# Mostrar todos los disparos
-if st.session_state.disparos:
-    st.subheader("Disparos realizados")
-
-    df_disp = pd.DataFrame(st.session_state.disparos)
-
-    # Crear campo de fútbol con plotly_football_pitch
-    dimensions = PitchDimensions()
-    fig = make_pitch_figure(
-        dimensions,
-        pitch_background=SingleColourBackground("#81B622")  # verde césped
-    )
-
-    # Añadir disparos
-    fig.add_scatter(
-        x=df_disp["x"],
-        y=df_disp["y"],
-        mode="markers",
-        marker=dict(
-            size=10 + df_disp["xG"] * 40,
-            color=df_disp["xG"],
-            colorscale="Reds",
-            showscale=True,
-            colorbar=dict(title="xG"),
-            line=dict(color='black', width=1)
-        ),
-        hovertemplate="xG: %{marker.color:.2f}<br>X: %{x}, Y: %{y}<extra></extra>",
-        name="Disparos"
-    )
-
-    st.plotly_chart(fig)

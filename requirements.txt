@@ -1,9 +1,6 @@
 streamlit
-streamlit-drawable-canvas
 pandas
 numpy
-xgboost
 joblib
-plotly
-plotly-football-pitch
+xgboost
 scikit-learn

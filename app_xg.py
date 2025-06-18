@@ -48,12 +48,12 @@ shot_technique = st.selectbox("Técnica", [
 ])
 
 # Boleanos
-under_pressure = st.checkbox("Bajo presión")
-one_on_one = st.checkbox("Uno contra uno")
-open_goal = st.checkbox("Portería vacía")
-aerial_won = st.checkbox("Remate aéreo ganado")
-first_time = st.checkbox("Disparo de primeras")
-deflected = st.checkbox("Desviado")
+under_pressure = st.selectbox("¿Bajo presión?", ["False", "True"])
+one_on_one = st.selectbox("¿Uno contra uno?", ["False", "True"])
+open_goal = st.selectbox("¿Portería vacía?", ["False", "True"])
+aerial_won = st.selectbox("¿Remate aéreo ganado?", ["False", "True"])
+first_time = st.selectbox("¿Disparo de primeras?", ["False", "True"])
+deflected = st.selectbox("¿Desviado?", ["False", "True"])
 
 # Calcular distancia y ángulo
 goal_x, goal_y = 120, 40

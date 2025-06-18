@@ -38,33 +38,9 @@ numeric_cols = ['distance', 'angle']
 
 st.subheader("Haz clic sobre el campo para registrar el disparo")
 
-# Canvas interactivo sin imagen
-canvas_result = st_canvas(
-    fill_color="red",
-    stroke_width=0,
-    stroke_color="red",
-    background_color="#81B622",
-    update_streamlit=True,
-    height=470,
-    width=700,
-    drawing_mode="point",
-    key="canvas"
-)
-
-# Procesar clic
-if canvas_result.json_data and canvas_result.json_data["objects"]:
-    punto = canvas_result.json_data["objects"][-1]
-    rel_x = punto["left"] / 700
-    rel_y = punto["top"] / 470
-
-    # Coordenadas en escala StatsBomb
-    x = int(rel_x * 120)
-    y = int(rel_y * 80)
-
-    st.success(f"Disparo en X = {x}, Y = {y}")
-else:
-    st.warning("Haz clic sobre el campo para registrar el disparo.")
-    st.stop()
+st.markdown("### Coordenadas del disparo")
+x = st.slider("Eje X (largo del campo)", min_value=0, max_value=120, value=100)
+y = st.slider("Eje Y (ancho del campo)", min_value=0, max_value=80, value=40)
 
 # Selección de opciones
 body_part = st.selectbox("Parte del cuerpo", ["Right Foot", "Left Foot", "Head"])

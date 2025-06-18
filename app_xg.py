@@ -14,7 +14,7 @@ import numpy as np
 import joblib
 from xgboost import XGBRegressor
 from streamlit_drawable_canvas import st_canvas
-import plotly.graph_objects as go
+from plotly_football_pitch import make_pitch_figure, PitchDimensions, SingleColourBackground
 
 # Cargar modelo y encoder
 modelo = joblib.load("modelo_prueba.pkl")
@@ -38,12 +38,12 @@ numeric_cols = ['distance', 'angle']
 
 st.subheader("Haz clic sobre el campo para registrar el disparo")
 
-# Canvas interactivo
+# Canvas interactivo sin imagen
 canvas_result = st_canvas(
     fill_color="red",
     stroke_width=0,
     stroke_color="red",
-    background_color="#a8dda8",
+    background_color="#81B622",
     update_streamlit=True,
     height=470,
     width=700,
@@ -136,28 +136,28 @@ if st.session_state.disparos:
 
     df_disp = pd.DataFrame(st.session_state.disparos)
 
-    # Campo StatsBomb en Plotly
-    fig = go.Figure()
-    fig.update_layout(
-        title="Disparos en el campo",
-        xaxis=dict(range=[0, 120], showgrid=False),
-        yaxis=dict(range=[0, 80], showgrid=False, scaleanchor="x", scaleratio=1),
-        plot_bgcolor='white',
-        paper_bgcolor='white'
+    # Crear campo de fútbol con plotly_football_pitch
+    dimensions = PitchDimensions()
+    fig = make_pitch_figure(
+        dimensions,
+        pitch_background=SingleColourBackground("#81B622")  # verde césped
     )
 
-    fig.add_trace(go.Scatter(
+    # Añadir disparos
+    fig.add_scatter(
         x=df_disp["x"],
         y=df_disp["y"],
         mode="markers",
         marker=dict(
-            size=df_disp["xG"] * 100,
+            size=10 + df_disp["xG"] * 40,
             color=df_disp["xG"],
             colorscale="Reds",
             showscale=True,
+            colorbar=dict(title="xG"),
             line=dict(color='black', width=1)
         ),
-        hovertemplate="xG: %{marker.color:.2f}<br>X: %{x}, Y: %{y}<extra></extra>"
-    ))
+        hovertemplate="xG: %{marker.color:.2f}<br>X: %{x}, Y: %{y}<extra></extra>",
+        name="Disparos"
+    )
 
     st.plotly_chart(fig)

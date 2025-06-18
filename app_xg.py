@@ -103,6 +103,8 @@ X_final = X_final[expected_features]
 # DEBUG: Mostrar info antes de predecir
 st.write("🧪 Distancia calculada:", round(distance, 2))
 st.write("🧪 Ángulo calculado:", round(angle, 2))
+st.write("Columnas booleanas en X_final:", [c for c in X_final.columns if "False" in c or "True" in c])
+
 
 # Predecir
 pred_xg = modelo.predict(X_final)[0]

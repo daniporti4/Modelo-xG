@@ -14,14 +14,17 @@ import numpy as np
 import joblib
 from xgboost import XGBRegressor
 from streamlit_drawable_canvas import st_canvas
-from PIL import Image
-
+import plotly.graph_objects as go
 
 # Cargar modelo y encoder
 modelo = joblib.load("modelo_prueba.pkl")
 encoder = joblib.load("encoder_ohe.pkl")
 
 st.title("Calculadora de xG")
+
+# Inicializar estado para guardar disparos
+if "disparos" not in st.session_state:
+    st.session_state.disparos = []
 
 # Columnas categóricas en orden
 categorical_cols = [
@@ -33,11 +36,6 @@ categorical_cols = [
 # Columnas numéricas
 numeric_cols = ['distance', 'angle']
 
-st.subheader("Haz clic en el campo para registrar el disparo")
-
-# Cargar imagen del campo
-campo = Image.open("campo.png").convert("RGB")
-
 st.subheader("Haz clic sobre el campo para registrar el disparo")
 
 # Canvas interactivo
@@ -45,7 +43,7 @@ canvas_result = st_canvas(
     fill_color="red",
     stroke_width=0,
     stroke_color="red",
-    background_image=campo,
+    background_color="#a8dda8",
     update_streamlit=True,
     height=470,
     width=700,
@@ -56,10 +54,10 @@ canvas_result = st_canvas(
 # Procesar clic
 if canvas_result.json_data and canvas_result.json_data["objects"]:
     punto = canvas_result.json_data["objects"][-1]
-    rel_x = punto["left"] / 700  # ancho real del canvas
-    rel_y = punto["top"] / 470   # alto real del canvas
+    rel_x = punto["left"] / 700
+    rel_y = punto["top"] / 470
 
-    # Convertir a escala StatsBomb (x: 0–120, y: 0–80)
+    # Coordenadas en escala StatsBomb
     x = int(rel_x * 120)
     y = int(rel_y * 80)
 
@@ -67,6 +65,12 @@ if canvas_result.json_data and canvas_result.json_data["objects"]:
 else:
     st.warning("Haz clic sobre el campo para registrar el disparo.")
     st.stop()
+
+# Selección de opciones
+body_part = st.selectbox("Parte del cuerpo", ["Right Foot", "Left Foot", "Head"])
+shot_technique = st.selectbox("Técnica", ["Normal", "Volley", "Lob"])
+shot_type = st.selectbox("Tipo", ["Open Play", "Free Kick", "From Corner"])
+play_pattern = st.selectbox("Patrón de juego", ["Regular Play", "From Counter", "From Throw In"])
 
 # Boleanos
 under_pressure = st.checkbox("Bajo presión")
@@ -76,7 +80,7 @@ aerial_won = st.checkbox("Remate aéreo ganado")
 first_time = st.checkbox("Disparo de primeras")
 deflected = st.checkbox("Desviado")
 
-# Calcular distancia y ángulo
+# Cálculo distancia y ángulo
 goal_x, goal_y = 120, 40
 distance = np.sqrt((goal_x - x)**2 + (goal_y - y)**2)
 
@@ -92,7 +96,7 @@ def calcular_angulo(x, y):
 
 angle = calcular_angulo(x, y)
 
-# DataFrame de entrada
+# Input para el modelo
 input_df = pd.DataFrame([{
     'shot_body_part': body_part,
     'play_pattern': play_pattern,
@@ -106,21 +110,54 @@ input_df = pd.DataFrame([{
     'shot_type': shot_type
 }])
 
-# Codificar categóricas
+# Codificación + unión con numéricas
 X_cat = encoder.transform(input_df)
 X_cat_df = pd.DataFrame(X_cat, columns=encoder.get_feature_names_out(), index=input_df.index)
-
-# Añadir numéricas
 X_num = pd.DataFrame([[distance, angle]], columns=numeric_cols)
 X_final = pd.concat([X_num, X_cat_df], axis=1)
 
-# Alinear columnas con el modelo
+# Asegurar columnas modelo
 expected_features = modelo.get_booster().feature_names
 for col in expected_features:
     if col not in X_final.columns:
         X_final[col] = 0.0
 X_final = X_final[expected_features]
 
-# Predecir
+# Predicción xG
 pred_xg = modelo.predict(X_final)[0]
 st.success(f"xG estimado: **{pred_xg:.3f}**")
+
+# Guardar disparo en el historial
+st.session_state.disparos.append({"x": x, "y": y, "xG": pred_xg})
+
+# Mostrar todos los disparos
+if st.session_state.disparos:
+    st.subheader("Disparos realizados")
+
+    df_disp = pd.DataFrame(st.session_state.disparos)
+
+    # Campo StatsBomb en Plotly
+    fig = go.Figure()
+    fig.update_layout(
+        title="Disparos en el campo",
+        xaxis=dict(range=[0, 120], showgrid=False),
+        yaxis=dict(range=[0, 80], showgrid=False, scaleanchor="x", scaleratio=1),
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+
+    fig.add_trace(go.Scatter(
+        x=df_disp["x"],
+        y=df_disp["y"],
+        mode="markers",
+        marker=dict(
+            size=df_disp["xG"] * 100,
+            color=df_disp["xG"],
+            colorscale="Reds",
+            showscale=True,
+            line=dict(color='black', width=1)
+        ),
+        hovertemplate="xG: %{marker.color:.2f}<br>X: %{x}, Y: %{y}<extra></extra>"
+    ))
+
+    st.plotly_chart(fig)

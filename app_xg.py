@@ -21,23 +21,15 @@ encoder = joblib.load("encoder_ohe.pkl")
 
 st.title("Calculadora de xG")
 
-# Inicializar historial
+# Inicializar historial si no existe
 if "disparos" not in st.session_state:
     st.session_state.disparos = []
 
-# Botón para reiniciar
-if st.button("🧹 Nuevo disparo"):
-    st.experimental_rerun()
+# Botón para borrar historial
+if st.button("🧹 Borrar historial de disparos"):
+    st.session_state.disparos = []
 
-# Columnas categóricas
-categorical_cols = [
-    'shot_body_part', 'play_pattern', 'under_pressure',
-    'shot_one_on_one', 'shot_open_goal', 'shot_aerial_won',
-    'shot_first_time', 'shot_deflected', 'shot_technique', 'shot_type'
-]
-numeric_cols = ['distance', 'angle']
-
-# Inputs usuario
+# Inputs
 x = st.slider("Coordenada X del disparo (0 a 120)", 0, 120, 100)
 y = st.slider("Coordenada Y del disparo (0 a 80)", 0, 80, 40)
 
@@ -60,81 +52,84 @@ aerial_won = st.selectbox("¿Remate aéreo ganado?", ["False", "True"])
 first_time = st.selectbox("¿Disparo de primeras?", ["False", "True"])
 deflected = st.selectbox("¿Desviado?", ["False", "True"])
 
-# Distancia y ángulo
-goal_x, goal_y = 120, 40
-distance = np.sqrt((goal_x - x)**2 + (goal_y - y)**2)
+# Botón para registrar disparo
+if st.button("📌 Registrar disparo"):
 
-def calcular_angulo(x, y):
-    left_post = np.array([120, 34])
-    right_post = np.array([120, 46])
-    shot_point = np.array([x, y])
-    v1 = left_post - shot_point
-    v2 = right_post - shot_point
-    cos_angle = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-    angle_rad = np.arccos(np.clip(cos_angle, -1.0, 1.0))
-    return np.degrees(angle_rad)
+    # Cálculo de distancia y ángulo
+    goal_x, goal_y = 120, 40
+    distance = np.sqrt((goal_x - x)**2 + (goal_y - y)**2)
 
-angle = calcular_angulo(x, y)
+    def calcular_angulo(x, y):
+        left_post = np.array([120, 34])
+        right_post = np.array([120, 46])
+        shot_point = np.array([x, y])
+        v1 = left_post - shot_point
+        v2 = right_post - shot_point
+        cos_angle = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+        angle_rad = np.arccos(np.clip(cos_angle, -1.0, 1.0))
+        return np.degrees(angle_rad)
 
-# Crear input para el modelo
-input_df = pd.DataFrame([{
-    'shot_body_part': body_part,
-    'play_pattern': play_pattern,
-    'under_pressure': under_pressure,
-    'shot_one_on_one': one_on_one,
-    'shot_open_goal': open_goal,
-    'shot_aerial_won': aerial_won,
-    'shot_first_time': first_time,
-    'shot_deflected': deflected,
-    'shot_technique': shot_technique,
-    'shot_type': shot_type
-}])
+    angle = calcular_angulo(x, y)
 
-# Codificar
-X_cat = encoder.transform(input_df)
-X_cat_df = pd.DataFrame(X_cat, columns=encoder.get_feature_names_out(), index=input_df.index)
-X_num = pd.DataFrame([[distance, angle]], columns=numeric_cols)
-X_final = pd.concat([X_num, X_cat_df], axis=1)
+    # Mostrar valores calculados
+    st.write("🧪 Distancia:", round(distance, 2))
+    st.write("🧪 Ángulo:", round(angle, 2))
 
-# Alinear columnas
-expected_features = modelo.get_booster().feature_names
-for col in expected_features:
-    if col not in X_final.columns:
-        X_final[col] = 0.0
-X_final = X_final[expected_features]
+    # Input para el modelo
+    input_df = pd.DataFrame([{
+        'shot_body_part': body_part,
+        'play_pattern': play_pattern,
+        'under_pressure': under_pressure,
+        'shot_one_on_one': one_on_one,
+        'shot_open_goal': open_goal,
+        'shot_aerial_won': aerial_won,
+        'shot_first_time': first_time,
+        'shot_deflected': deflected,
+        'shot_technique': shot_technique,
+        'shot_type': shot_type
+    }])
 
-# DEBUG info
-st.write("🧪 Distancia calculada:", round(distance, 2))
-st.write("🧪 Ángulo calculado:", round(angle, 2))
+    # Codificar
+    X_cat = encoder.transform(input_df)
+    X_cat_df = pd.DataFrame(X_cat, columns=encoder.get_feature_names_out(), index=input_df.index)
+    X_num = pd.DataFrame([[distance, angle]], columns=["distance", "angle"])
+    X_final = pd.concat([X_num, X_cat_df], axis=1)
 
-# Predicción
-pred_xg = modelo.predict(X_final)[0]
-st.success(f"xG estimado: **{pred_xg:.3f}**")
+    expected_features = modelo.get_booster().feature_names
+    for col in expected_features:
+        if col not in X_final.columns:
+            X_final[col] = 0.0
+    X_final = X_final[expected_features]
 
-# Guardar disparo
-st.session_state.disparos.append({
-    "x": x,
-    "y": y,
-    "distance": round(distance, 2),
-    "angle": round(angle, 2),
-    "xG": round(pred_xg, 3),
-    "under_pressure": under_pressure,
-    "one_on_one": one_on_one,
-    "open_goal": open_goal,
-    "aerial_won": aerial_won,
-    "first_time": first_time,
-    "deflected": deflected,
-    "body_part": body_part,
-    "shot_technique": shot_technique,
-    "shot_type": shot_type,
-    "play_pattern": play_pattern
-})
+    # Predicción
+    pred_xg = modelo.predict(X_final)[0]
+    st.success(f"xG estimado: **{pred_xg:.3f}**")
 
-# Mostrar historial y exportar
+    # Guardar disparo
+    st.session_state.disparos.append({
+        "x": x,
+        "y": y,
+        "distance": round(distance, 2),
+        "angle": round(angle, 2),
+        "xG": round(pred_xg, 3),
+        "under_pressure": under_pressure,
+        "one_on_one": one_on_one,
+        "open_goal": open_goal,
+        "aerial_won": aerial_won,
+        "first_time": first_time,
+        "deflected": deflected,
+        "body_part": body_part,
+        "shot_technique": shot_technique,
+        "shot_type": shot_type,
+        "play_pattern": play_pattern
+    })
+
+# Mostrar historial
 if st.session_state.disparos:
     st.subheader("📊 Disparos registrados")
     df_disp = pd.DataFrame(st.session_state.disparos)
     st.dataframe(df_disp)
 
+    # Botón descarga CSV
     csv = df_disp.to_csv(index=False).encode("utf-8")
     st.download_button("📥 Descargar CSV", data=csv, file_name="disparos_xg.csv", mime="text/csv")

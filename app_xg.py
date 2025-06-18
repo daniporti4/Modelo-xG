@@ -100,9 +100,29 @@ for col in expected_features:
         X_final[col] = 0.0
 X_final = X_final[expected_features]
 
-# DEBUG: Mostrar info antes de predecir
-st.write("🧪 Distancia calculada:", round(distance, 2))
-st.write("🧪 Ángulo calculado:", round(angle, 2))
+st.subheader("🔍 Verificación de entrada al modelo")
+
+st.write("✔️ Valores booleanos seleccionados:")
+st.write({
+    "under_pressure": under_pressure,
+    "one_on_one": one_on_one,
+    "open_goal": open_goal,
+    "aerial_won": aerial_won,
+    "first_time": first_time,
+    "deflected": deflected
+})
+
+st.write("✔️ Columnas codificadas relacionadas con booleanos:")
+bool_columns = [col for col in X_final.columns if any(key in col for key in [
+    "under_pressure", "one_on_one", "open_goal", "aerial_won", "first_time", "deflected"
+])]
+st.write(bool_columns)
+
+st.write("✔️ Valores en esas columnas (0/1):")
+st.write(X_final[bool_columns])
+
+st.write("✔️ Primeras 10 columnas del input total:")
+st.write(X_final.iloc[:, :10])
 
 # Predecir
 pred_xg = modelo.predict(X_final)[0]

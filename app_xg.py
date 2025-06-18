@@ -21,17 +21,23 @@ encoder = joblib.load("encoder_ohe.pkl")
 
 st.title("Calculadora de xG")
 
-# Columnas categóricas en orden
+# Inicializar historial
+if "disparos" not in st.session_state:
+    st.session_state.disparos = []
+
+# Botón para reiniciar
+if st.button("🧹 Nuevo disparo"):
+    st.experimental_rerun()
+
+# Columnas categóricas
 categorical_cols = [
     'shot_body_part', 'play_pattern', 'under_pressure',
     'shot_one_on_one', 'shot_open_goal', 'shot_aerial_won',
     'shot_first_time', 'shot_deflected', 'shot_technique', 'shot_type'
 ]
-
-# Columnas numéricas
 numeric_cols = ['distance', 'angle']
 
-# Inputs del usuario
+# Inputs usuario
 x = st.slider("Coordenada X del disparo (0 a 120)", 0, 120, 100)
 y = st.slider("Coordenada Y del disparo (0 a 80)", 0, 80, 40)
 
@@ -41,13 +47,12 @@ play_pattern = st.selectbox("Tipo de jugada", [
     'From Counter', 'From Goal Kick', 'From Keeper', 'From Kick Off', 'Other'
 ])
 shot_type = st.selectbox("Tipo de disparo", ['Open Play', 'Free Kick', 'Corner'])
-
 shot_technique = st.selectbox("Técnica", [
     'Normal', 'Half Volley', 'Volley', 'Lob',
     'Overhead Kick', 'Diving Header', 'Backheel'
 ])
 
-# Boleanos
+# Booleanos como selectbox
 under_pressure = st.selectbox("¿Bajo presión?", ["False", "True"])
 one_on_one = st.selectbox("¿Uno contra uno?", ["False", "True"])
 open_goal = st.selectbox("¿Portería vacía?", ["False", "True"])
@@ -55,7 +60,7 @@ aerial_won = st.selectbox("¿Remate aéreo ganado?", ["False", "True"])
 first_time = st.selectbox("¿Disparo de primeras?", ["False", "True"])
 deflected = st.selectbox("¿Desviado?", ["False", "True"])
 
-# Calcular distancia y ángulo
+# Distancia y ángulo
 goal_x, goal_y = 120, 40
 distance = np.sqrt((goal_x - x)**2 + (goal_y - y)**2)
 
@@ -71,59 +76,65 @@ def calcular_angulo(x, y):
 
 angle = calcular_angulo(x, y)
 
-# DataFrame de entrada
+# Crear input para el modelo
 input_df = pd.DataFrame([{
     'shot_body_part': body_part,
     'play_pattern': play_pattern,
-    'under_pressure': str(under_pressure),
-    'shot_one_on_one': str(one_on_one),
-    'shot_open_goal': str(open_goal),
-    'shot_aerial_won': str(aerial_won),
-    'shot_first_time': str(first_time),
-    'shot_deflected': str(deflected),
+    'under_pressure': under_pressure,
+    'shot_one_on_one': one_on_one,
+    'shot_open_goal': open_goal,
+    'shot_aerial_won': aerial_won,
+    'shot_first_time': first_time,
+    'shot_deflected': deflected,
     'shot_technique': shot_technique,
     'shot_type': shot_type
 }])
 
-# Codificar categóricas
+# Codificar
 X_cat = encoder.transform(input_df)
 X_cat_df = pd.DataFrame(X_cat, columns=encoder.get_feature_names_out(), index=input_df.index)
-
-# Añadir numéricas
 X_num = pd.DataFrame([[distance, angle]], columns=numeric_cols)
 X_final = pd.concat([X_num, X_cat_df], axis=1)
 
-# Alinear columnas con el modelo
+# Alinear columnas
 expected_features = modelo.get_booster().feature_names
 for col in expected_features:
     if col not in X_final.columns:
         X_final[col] = 0.0
 X_final = X_final[expected_features]
 
-st.subheader("🔍 Verificación de entrada al modelo")
+# DEBUG info
+st.write("🧪 Distancia calculada:", round(distance, 2))
+st.write("🧪 Ángulo calculado:", round(angle, 2))
 
-st.write("✔️ Valores booleanos seleccionados:")
-st.write({
+# Predicción
+pred_xg = modelo.predict(X_final)[0]
+st.success(f"xG estimado: **{pred_xg:.3f}**")
+
+# Guardar disparo
+st.session_state.disparos.append({
+    "x": x,
+    "y": y,
+    "distance": round(distance, 2),
+    "angle": round(angle, 2),
+    "xG": round(pred_xg, 3),
     "under_pressure": under_pressure,
     "one_on_one": one_on_one,
     "open_goal": open_goal,
     "aerial_won": aerial_won,
     "first_time": first_time,
-    "deflected": deflected
+    "deflected": deflected,
+    "body_part": body_part,
+    "shot_technique": shot_technique,
+    "shot_type": shot_type,
+    "play_pattern": play_pattern
 })
 
-st.write("✔️ Columnas codificadas relacionadas con booleanos:")
-bool_columns = [col for col in X_final.columns if any(key in col for key in [
-    "under_pressure", "one_on_one", "open_goal", "aerial_won", "first_time", "deflected"
-])]
-st.write(bool_columns)
+# Mostrar historial y exportar
+if st.session_state.disparos:
+    st.subheader("📊 Disparos registrados")
+    df_disp = pd.DataFrame(st.session_state.disparos)
+    st.dataframe(df_disp)
 
-st.write("✔️ Valores en esas columnas (0/1):")
-st.write(X_final[bool_columns])
-
-st.write("✔️ Primeras 10 columnas del input total:")
-st.write(X_final.iloc[:, :10])
-
-# Predecir
-pred_xg = modelo.predict(X_final)[0]
-st.success(f"xG estimado: **{pred_xg:.3f}**")
+    csv = df_disp.to_csv(index=False).encode("utf-8")
+    st.download_button("📥 Descargar CSV", data=csv, file_name="disparos_xg.csv", mime="text/csv")
